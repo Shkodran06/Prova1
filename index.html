@@ -6,92 +6,115 @@
 <style>
 body { font-family: Arial; margin: 20px; }
 .hidden { display: none; }
-button { margin: 5px; }
-pre { background: #f4f4f4; padding: 10px; }
+button { margin-left: 5px; }
+input { margin: 3px; }
+pre { background: #f4f4f4; padding: 10px; white-space: pre-wrap; }
+.section { border: 1px solid #ccc; padding: 10px; margin-bottom: 15px; }
 </style>
 </head>
 <body>
 
+<h1>Arbeits Planner</h1>
+
 <!-- LOGIN -->
-<div id="login">
-  <h2>Login Admin</h2>
-  <input id="user" placeholder="Username"><br>
-  <input id="pass" type="password" placeholder="Password"><br>
-  <button onclick="login()">Accedi</button>
+<div class="section">
+  <h3>Login Admin (opzionale)</h3>
+  <input id="user" placeholder="Username">
+  <input id="pass" type="password" placeholder="Password">
+  <button onclick="login()">Login</button>
+  <span id="loginStatus"></span>
 </div>
 
 <!-- ADMIN -->
-<div id="admin" class="hidden">
-  <h2>Gestione Arbeiter</h2>
-  <input id="name" placeholder="Nome e Cognome">
+<div class="section hidden" id="admin">
+  <h3>Gestione Arbeiter</h3>
+
+  <input id="newName" placeholder="Nome e Cognome">
   <button onclick="addWorker()">+</button>
 
   <ul id="workerList"></ul>
-
-  <button onclick="goPlanner()">Vai alla programmazione</button>
 </div>
 
-<!-- PLANNER -->
-<div id="planner" class="hidden">
-  <h2>Seleziona presenti</h2>
+<!-- PROGRAMMAZIONE -->
+<div class="section">
+  <h3>Programmazione – Seleziona presenti</h3>
   <div id="presentList"></div>
-
   <button onclick="generate()">Genera programma</button>
+</div>
+
+<!-- OUTPUT -->
+<div class="section">
+  <h3>Output</h3>
   <pre id="output"></pre>
 </div>
 
 <script>
-const ADMIN_USER = "admin";
-const ADMIN_PASS = "1234";
+/* ===== CONFIG ===== */
+const ADMIN_USER = "Shkodran";
+const ADMIN_PASS = "Shkodran2006@";
 
+/* ===== STATE ===== */
+let isAdmin = false;
 let workers = JSON.parse(localStorage.getItem("workers")) || [];
 
+/* ===== UTILS ===== */
 function save() {
   localStorage.setItem("workers", JSON.stringify(workers));
 }
 
+/* ===== LOGIN ===== */
 function login() {
   if (user.value === ADMIN_USER && pass.value === ADMIN_PASS) {
-    loginDiv(false);
-    adminDiv(true);
+    isAdmin = true;
+    document.getElementById("admin").classList.remove("hidden");
+    loginStatus.textContent = "✔ Login effettuato";
     renderWorkers();
-  } else alert("Login errato");
+  } else {
+    alert("Credenziali errate");
+  }
 }
 
-function loginDiv(show) { document.getElementById("login").classList.toggle("hidden", !show); }
-function adminDiv(show) { document.getElementById("admin").classList.toggle("hidden", !show); }
-function plannerDiv(show) { document.getElementById("planner").classList.toggle("hidden", !show); }
-
+/* ===== ADMIN ===== */
 function addWorker() {
-  if (!name.value) return;
-  workers.push({ id: Date.now(), name: name.value });
-  name.value = "";
+  if (!newName.value.trim()) return;
+  workers.push({ id: Date.now(), name: newName.value.trim() });
+  newName.value = "";
   save();
   renderWorkers();
+  renderPresent();
 }
 
 function removeWorker(id) {
   workers = workers.filter(w => w.id !== id);
   save();
   renderWorkers();
+  renderPresent();
+}
+
+function editWorker(id) {
+  const w = workers.find(x => x.id === id);
+  const nuovo = prompt("Modifica nome:", w.name);
+  if (nuovo) {
+    w.name = nuovo.trim();
+    save();
+    renderWorkers();
+    renderPresent();
+  }
 }
 
 function renderWorkers() {
+  if (!isAdmin) return;
   workerList.innerHTML = "";
   workers.forEach(w => {
     workerList.innerHTML += `
       <li>${w.name}
-      <button onclick="removeWorker(${w.id})">-</button>
+        <button onclick="editWorker(${w.id})">✏️</button>
+        <button onclick="removeWorker(${w.id})">−</button>
       </li>`;
   });
 }
 
-function goPlanner() {
-  adminDiv(false);
-  plannerDiv(true);
-  renderPresent();
-}
-
+/* ===== PROGRAMMAZIONE ===== */
 function renderPresent() {
   presentList.innerHTML = "";
   workers.forEach(w => {
@@ -103,13 +126,13 @@ function renderPresent() {
   });
 }
 
+/* ===== GENERAZIONE OUTPUT ===== */
 function generate() {
-  const selected = [...document.querySelectorAll("input[type=checkbox]:checked")]
+  const selected = [...document.querySelectorAll("#presentList input:checked")]
     .map(c => c.value);
 
   let out = "";
 
-  // MIDI
   for (let i = 1; i <= 10; i++) {
     out += `Midi ${i}\t${selected[i-1] || ""}\n`;
   }
@@ -128,8 +151,10 @@ function generate() {
 
   output.textContent = out;
 }
+
+/* INIT */
+renderPresent();
 </script>
 
 </body>
 </html>
-
